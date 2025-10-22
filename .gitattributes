@@ -1,0 +1,9 @@
+* text=auto eol=lf
+
+# Ensure images are treated as binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.svg text eol=lf
+
