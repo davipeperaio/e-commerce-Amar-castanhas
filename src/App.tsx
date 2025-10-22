@@ -6,6 +6,7 @@ import { RetailMargins } from "./components/RetailMargins";
 import { WholesaleMargins } from "./components/WholesaleMargins";
 import { ExpenseManagement } from "./components/ExpenseManagement";
 import { mockProducts, defaultRetailMargins, defaultWholesaleMargins, mockExpenses } from "./lib/mockData";
+import { supabase, isSupabaseEnabled } from "./lib/supabase";
 import { Product, CartItem, RetailMargin, WholesaleMargins as WholesaleMarginsType, WeightOption, Expense, Customer, Sale } from "./lib/types";
 import { CustomerManagement } from "./components/CustomerManagement";
 import { Button } from "./components/ui/button";
@@ -41,6 +42,83 @@ export default function App() {
     }
   }, []);
 
+  // Load data from Supabase if configured
+  useEffect(() => {
+    (async () => {
+      if (!isSupabaseEnabled || !supabase) return;
+      try {
+        const [p, rm, wm, ex, cu, sa] = await Promise.all([
+          supabase.from("products").select("*"),
+          supabase.from("retail_margins").select("*"),
+          supabase.from("wholesale_margins").select("*"),
+          supabase.from("expenses").select("*"),
+          supabase.from("customers").select("*"),
+          supabase.from("sales").select("*"),
+        ]);
+        if (!p.error && p.data) setProducts(p.data as Product[]);
+        if (!rm.error && rm.data) setRetailMargins((rm.data as any[]).map(r => ({ productId: r.product_id, margem: Number(r.margem) })));
+        if (!wm.error && wm.data) setWholesaleMargins(wm.data as unknown as WholesaleMarginsType[]);
+        if (!ex.error && ex.data) setExpenses((ex.data as any[]).map(e => ({ ...e, data: new Date(e.data) })) as Expense[]);
+        if (!cu.error && cu.data) setCustomers((cu.data as any[]).map(c => ({ ...c, createdAt: new Date(c.created_at) })) as Customer[]);
+        if (!sa.error && sa.data) setSales((sa.data as any[]).map(s => ({ ...s, date: new Date(s.date), customerId: s.customer_id })) as Sale[]);
+      } catch (e) {
+        console.error("Failed to load data from Supabase", e);
+      }
+    })();
+  }, []);
+
+  // Persist helpers (upsert); fallback to state-only when Supabase disabled
+  const persistProducts = async (items: Product[]) => {
+    setProducts(items);
+    if (!isSupabaseEnabled || !supabase) return;
+    try {
+      await supabase.from("products").upsert(items as any, { onConflict: "id" });
+    } catch (e) { console.error(e); }
+  };
+
+  const persistRetailMargins = async (items: RetailMargin[]) => {
+    setRetailMargins(items);
+    if (!isSupabaseEnabled || !supabase) return;
+    try {
+      const rows = items.map(i => ({ product_id: i.productId, margem: i.margem }));
+      await supabase.from("retail_margins").upsert(rows as any, { onConflict: "product_id" });
+    } catch (e) { console.error(e); }
+  };
+
+  const persistWholesaleMargins = async (items: WholesaleMarginsType[]) => {
+    setWholesaleMargins(items);
+    if (!isSupabaseEnabled || !supabase) return;
+    try {
+      await supabase.from("wholesale_margins").upsert(items as any, { onConflict: "product_id" });
+    } catch (e) { console.error(e); }
+  };
+
+  const persistExpenses = async (items: Expense[]) => {
+    setExpenses(items);
+    if (!isSupabaseEnabled || !supabase) return;
+    try {
+      const rows = items.map(i => ({ ...i, data: (i.data as any)?.toISOString?.() ?? i.data }));
+      await supabase.from("expenses").upsert(rows as any, { onConflict: "id" });
+    } catch (e) { console.error(e); }
+  };
+
+  const persistCustomers = async (items: Customer[]) => {
+    setCustomers(items);
+    if (!isSupabaseEnabled || !supabase) return;
+    try {
+      const rows = items.map(i => ({ ...i, created_at: (i.createdAt as any)?.toISOString?.() ?? i.createdAt }));
+      await supabase.from("customers").upsert(rows as any, { onConflict: "id" });
+    } catch (e) { console.error(e); }
+  };
+
+  const persistSales = async (items: Sale[]) => {
+    setSales(items);
+    if (!isSupabaseEnabled || !supabase) return;
+    try {
+      const rows = items.map(i => ({ ...i, date: (i.date as any)?.toISOString?.() ?? i.date, customer_id: i.customerId ?? null }));
+      await supabase.from("sales").upsert(rows as any, { onConflict: "id" });
+    } catch (e) { console.error(e); }
+  };
   // Load cart from localStorage
   useEffect(() => {
     const savedCart = localStorage.getItem("cart");
@@ -113,17 +191,16 @@ export default function App() {
           onAddToCart={handleAddToCart}
           onUpdateCart={setCart}
           onCheckout={({ items, total, paymentMethod, installments, date }) => {
-            setSales((prev) => [
-              {
-                id: `s-${Date.now()}`,
-                date,
-                customerId: null,
-                valor: total,
-                origem: "loja",
-                observacoes: `${paymentMethod}${installments ? ` ${installments}x` : ""}`,
-              },
-              ...prev,
-            ]);
+            const sale: Sale = {
+              id: `s-${Date.now()}`,
+              date,
+              customerId: null,
+              valor: total,
+              origem: "loja",
+              observacoes: `${paymentMethod}${installments ? ` ${installments}x` : ""}`,
+            };
+            const next = [sale, ...sales];
+            persistSales(next);
           }}
         />
       </>
@@ -288,36 +365,36 @@ export default function App() {
             {currentTab === "products" && (
               <ProductManagement
                 products={products}
-                onUpdateProducts={setProducts}
+                onUpdateProducts={persistProducts}
               />
             )}
             {currentTab === "retail" && (
               <RetailMargins
                 products={products}
                 margins={retailMargins}
-                onUpdateMargins={setRetailMargins}
-                onUpdateProducts={setProducts}
+                onUpdateMargins={persistRetailMargins}
+                onUpdateProducts={persistProducts}
               />
             )}
             {currentTab === "wholesale" && (
               <WholesaleMargins
                 products={products}
                 margins={wholesaleMargins}
-                onUpdateMargins={setWholesaleMargins}
+                onUpdateMargins={persistWholesaleMargins}
               />
             )}
             {currentTab === "expenses" && (
               <ExpenseManagement
                 expenses={expenses}
-                onUpdateExpenses={setExpenses}
+                onUpdateExpenses={persistExpenses}
               />
             )}
             {currentTab === "customers" && (
               <CustomerManagement
                 customers={customers}
                 sales={sales}
-                onUpdateCustomers={setCustomers}
-                onUpdateSales={setSales}
+                onUpdateCustomers={persistCustomers}
+                onUpdateSales={persistSales}
               />
             )}
           </motion.div>
