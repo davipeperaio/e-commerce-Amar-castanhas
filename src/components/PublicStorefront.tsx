@@ -8,8 +8,7 @@ import { Card, CardContent } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "./ui/sheet";
-import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
-import { Leaf, Search, ShoppingCart, User, PackageX, Percent, ChevronDown, Flame } from "lucide-react";
+import { Leaf, Search, ShoppingCart, User, PackageX } from "lucide-react";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { Cart } from "./Cart";
 
@@ -144,43 +143,6 @@ export function PublicStorefront({ products, onLogin, cart, onAddToCart, onUpdat
         </div>
       </header>
 
-      {/* Category Tabs */}
-      <div className="border-b border-border bg-card/50 sticky top-[73px] z-10">
-        <div className="container mx-auto px-4 py-3">
-          <Tabs value={selectedCategory} onValueChange={(v) => setSelectedCategory(v as ProductCategory | "Todos")}>
-            <TabsList className="w-full justify-start overflow-x-auto flex-nowrap bg-muted/50">
-              <TabsTrigger value="Todos" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                Todos
-              </TabsTrigger>
-              <TabsTrigger value="Castanhas" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                Castanhas
-              </TabsTrigger>
-              <TabsTrigger value="Temperos" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                Temperos
-              </TabsTrigger>
-              <TabsTrigger value="Frutas Desidratadas" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                Frutas Desidratadas
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
-      </div>
-
-      {/* Hero Section */}
-      <div className="bg-gradient-to-br from-[#f4ede0] via-[#faf8f5] to-[#e8dcc8] py-12 md:py-16">
-        <div className="container mx-auto px-4 text-center">
-          <div className="inline-flex items-center gap-3 sm:gap-4 justify-center px-6 sm:px-8 py-3 sm:py-4 rounded-full bg-primary text-primary-foreground shadow-2xl drop-shadow-xl ring-1 ring-primary/40 mx-auto select-none transition-transform hover:-translate-y-0.5">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/95 flex items-center justify-center shadow-md">
-              <Flame className="w-5 h-5 sm:w-6 sm:h-6 text-primary animate-pulse" />
-            </div>
-            <span className="uppercase tracking-wide font-extrabold text-lg sm:text-2xl">
-              Produtos de Qualidade PREMIUM
-            </span>
-            <ChevronDown className="w-5 h-5 sm:w-6 sm:h-6 opacity-90" />
-          </div>
-        </div>
-      </div>
-
       {/* Products Grid */}
       <div className="container mx-auto px-4 py-8 md:py-12">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -272,6 +234,8 @@ export function PublicStorefront({ products, onLogin, cart, onAddToCart, onUpdat
     </div>
   );
 }
+
+
 
 
 
