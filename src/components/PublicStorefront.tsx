@@ -167,16 +167,14 @@ export function PublicStorefront({ products, onLogin, cart, onAddToCart, onUpdat
       </div>
 
       {/* Hero Section */}
-      <div className="bg-gradient-to-br from-[#f4ede0] via-[#faf8f5] to-[#e8dcc8] py-12 md:py-16">
-        <div className="container mx-auto px-4 text-center">
-          <div className="inline-flex items-center gap-3 sm:gap-4 justify-center px-6 sm:px-8 py-3 sm:py-4 rounded-full bg-primary text-primary-foreground shadow-2xl drop-shadow-xl ring-1 ring-primary/40 mx-auto select-none transition-transform hover:-translate-y-0.5">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/95 flex items-center justify-center shadow-md">
-              <Flame className="w-5 h-5 sm:w-6 sm:h-6 text-primary animate-pulse" />
-            </div>
-            <span className="uppercase tracking-wide font-extrabold text-lg sm:text-2xl">
-              Produtos de Qualidade PREMIUM
-            </span>
-            <ChevronDown className="w-5 h-5 sm:w-6 sm:h-6 opacity-90" />
+      <div className="bg-gradient-to-br from-[#f4ede0] via-[#faf8f5] to-[#e8dcc8] py-8 md:py-12">
+        <div className="container mx-auto px-4">
+          <div className="h-56 md:h-80 w-full flex items-center justify-center">
+            <ImageWithFallback
+              src="/hero-illustration.png"
+              alt="Amar Castanhas — Produtos naturais premium"
+              className="h-full w-auto max-w-full object-contain drop-shadow-2xl"
+            />
           </div>
         </div>
       </div>
