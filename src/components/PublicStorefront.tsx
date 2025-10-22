@@ -169,10 +169,11 @@ export function PublicStorefront({ products, onLogin, cart, onAddToCart, onUpdat
       {/* Hero Section */}
       <div className="bg-gradient-to-br from-[#f4ede0] via-[#faf8f5] to-[#e8dcc8] py-12 md:py-16">
         <div className="container mx-auto px-4 text-center">
-          <h2 className="text-[#3d3426] mb-4">Castanhas e Oleaginosas Premium</h2>
-          <p className="text-muted-foreground max-w-2xl mx-auto">
-            Produtos naturais, selecionados e de alta qualidade. Escolha o peso ideal para você.
-          </p>
+          <div className="inline-flex items-center justify-center px-6 py-3 rounded-full bg-primary text-primary-foreground shadow-lg ring-1 ring-primary/20 mx-auto">
+            <span className="uppercase tracking-wide font-extrabold text-sm sm:text-base">
+              Produtos de Qualidade PREMIUM
+            </span>
+          </div>
         </div>
       </div>
 
