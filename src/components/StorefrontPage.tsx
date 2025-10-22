@@ -1,5 +1,5 @@
 ﻿import { useState } from "react";
-import { Product } from "../lib/mockData";
+import { Product } from "../lib/types";
 import { formatCurrency } from "../lib/utils";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -196,3 +196,4 @@ export function StorefrontPage({
     </div>
   );
 }
+

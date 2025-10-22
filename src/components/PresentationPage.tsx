@@ -1,4 +1,4 @@
-import { Product } from "../lib/mockData";
+import { Product } from "../lib/types";
 import { formatCurrency, deriveMarginFromPrices } from "../lib/utils";
 import { Button } from "./ui/button";
 import { Card, CardContent } from "./ui/card";

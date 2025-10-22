@@ -1,6 +1,8 @@
-﻿import { useState } from "react";
+﻿import { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { CartItem, PaymentMethod } from "../lib/types";
 import { formatCurrency } from "../lib/utils";
+import { normalizePtBrLabel } from "../lib/normalize";
 import { Button } from "./ui/button";
 import { Card, CardContent } from "./ui/card";
 import { Label } from "./ui/label";
@@ -44,16 +46,22 @@ export function Cart({ cart, onUpdateCart, onCheckout }: CartProps) {
     return sum + item.product.prices[item.weight] * item.quantity;
   }, 0);
 
+  const maxInstallments = 10;
+  const showInstallments = paymentMethod === "credit" && total > 300;
+
   const handleFinalizePurchase = () => {
     if (cart.length === 0) {
-      toast.error("Seu carrinho estÃ¡ vazio");
+      toast.error("Seu carrinho está vazio");
       return;
     }
 
-    try { onCheckout?.({ items: cart, total, paymentMethod, installments: showInstallments ? installments : undefined, date: new Date() }); } catch (e) { console.error(e); }
+    try {
+      onCheckout?.({ items: cart, total, paymentMethod, installments: showInstallments ? installments : undefined, date: new Date() });
+    } catch (e) {
+      console.error(e);
+    }
     setShowSuccessDialog(true);
     
-    // Clear cart after successful purchase
     setTimeout(() => {
       onUpdateCart([]);
       setShowSuccessDialog(false);
@@ -61,15 +69,12 @@ export function Cart({ cart, onUpdateCart, onCheckout }: CartProps) {
     }, 2000);
   };
 
-  const maxInstallments = 10;
-  const showInstallments = paymentMethod === "credit" && total > 300;
-
   return (
     <div className="flex flex-col h-full">
       {cart.length === 0 ? (
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center py-12">
-            <p className="text-muted-foreground">Seu carrinho estÃ¡ vazio</p>
+            <p className="text-muted-foreground">Seu carrinho está vazio</p>
             <p className="text-sm text-muted-foreground mt-2">
               Adicione produtos para continuar
             </p>
@@ -78,13 +83,15 @@ export function Cart({ cart, onUpdateCart, onCheckout }: CartProps) {
       ) : (
         <>
           {/* Cart Items */}
-          <div className="flex-1 overflow-y-auto py-6 space-y-4">
+          <div className="flex-1 overflow-y-auto py-6 px-4 space-y-4">
+            <AnimatePresence initial={false}>
             {cart.map((item, index) => {
               const itemPrice = item.product.prices[item.weight];
               const subtotal = itemPrice * item.quantity;
 
               return (
-                <Card key={`${item.product.id}-${item.weight}`} className="border-border">
+                <motion.div key={`${item.product.id}-${item.weight}`} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.18 }}>
+                <Card className="border-border rounded-xl shadow-sm hover:shadow-md transition-shadow">
                   <CardContent className="p-4">
                     <div className="flex gap-4">
                       <div className="relative w-20 h-20 rounded-lg overflow-hidden bg-muted flex-shrink-0">
@@ -98,7 +105,7 @@ export function Cart({ cart, onUpdateCart, onCheckout }: CartProps) {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1 min-w-0">
-                            <h4 className="text-foreground truncate">{item.product.nome}</h4>
+                            <h4 className="text-foreground truncate">{normalizePtBrLabel(item.product.nome)}</h4>
                             <p className="text-xs text-muted-foreground mt-1">
                               Peso: {item.weight}
                             </p>
@@ -126,7 +133,7 @@ export function Cart({ cart, onUpdateCart, onCheckout }: CartProps) {
                             >
                               <Minus className="w-3 h-3" />
                             </Button>
-                            <span className="text-sm w-8 text-center">{item.quantity}</span>
+                            <span className="w-6 text-center">{item.quantity}</span>
                             <Button
                               variant="outline"
                               size="icon"
@@ -144,12 +151,14 @@ export function Cart({ cart, onUpdateCart, onCheckout }: CartProps) {
                     </div>
                   </CardContent>
                 </Card>
+                </motion.div>
               );
             })}
+            </AnimatePresence>
           </div>
 
           {/* Payment & Checkout */}
-          <div className="border-t border-border pt-6 space-y-6">
+          <div className="border-t border-border pt-6 space-y-6 px-4 pb-5">
             {/* Payment Method */}
             <div className="space-y-3">
               <Label>Forma de Pagamento</Label>
@@ -165,14 +174,14 @@ export function Cart({ cart, onUpdateCart, onCheckout }: CartProps) {
                   <RadioGroupItem value="credit" id="credit" />
                   <Label htmlFor="credit" className="flex items-center gap-2 cursor-pointer flex-1">
                     <CreditCard className="w-4 h-4 text-primary" />
-                    CrÃ©dito
+                    Crédito
                   </Label>
                 </div>
                 <div className="flex items-center space-x-2 p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors">
                   <RadioGroupItem value="debit" id="debit" />
                   <Label htmlFor="debit" className="flex items-center gap-2 cursor-pointer flex-1">
                     <Banknote className="w-4 h-4 text-primary" />
-                    DÃ©bito
+                    Débito
                   </Label>
                 </div>
               </RadioGroup>
@@ -200,7 +209,7 @@ export function Cart({ cart, onUpdateCart, onCheckout }: CartProps) {
             {/* Total */}
             <div className="space-y-2">
               <Separator className="bg-border" />
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between rounded-lg bg-muted/30 px-3 py-2">
                 <span className="text-muted-foreground">Total</span>
                 <span className="text-primary">{formatCurrency(total)}</span>
               </div>
@@ -214,7 +223,7 @@ export function Cart({ cart, onUpdateCart, onCheckout }: CartProps) {
             {/* Checkout Button */}
             <Button
               onClick={handleFinalizePurchase}
-              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+              className="w-full max-w-sm mx-auto bg-primary hover:bg-primary/90 text-primary-foreground rounded-full shadow-md transition-transform hover:-translate-y-0.5"
             >
               Finalizar Compra
             </Button>
@@ -241,4 +250,14 @@ export function Cart({ cart, onUpdateCart, onCheckout }: CartProps) {
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
+
 

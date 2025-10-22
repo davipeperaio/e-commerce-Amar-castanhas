@@ -170,11 +170,19 @@ export function ExpenseManagement({ expenses, onUpdateExpenses }: ExpenseManagem
     )
   ).sort();
 
-  // Ensure current month is in the list
-  // Do not push months without expenses; just add 'all' at the top for convenience
+  // Ensure current month is present even when there are no expenses
   const currentMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+  if (!availableMonths.includes(currentMonth)) {
+    availableMonths.push(currentMonth);
+    availableMonths.sort();
+  }
+  // Add 'all' at the top for convenience
   if (!availableMonths.includes('all')) {
     availableMonths.unshift('all');
+  }
+  // If current selection is not available (e.g., after data change), snap to current month
+  if (!availableMonths.includes(selectedMonth)) {
+    setSelectedMonth(currentMonth);
   }
 
   const formatMonthYear = (monthStr: string) => {
@@ -209,7 +217,7 @@ export function ExpenseManagement({ expenses, onUpdateExpenses }: ExpenseManagem
                   <SelectContent>
                     {availableMonths.map(month => (
                       <SelectItem key={month} value={month}>
-                        {formatMonthYear(month)}
+                        {month === 'all' ? 'Todos os meses' : formatMonthYear(month)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -538,4 +546,7 @@ export function ExpenseManagement({ expenses, onUpdateExpenses }: ExpenseManagem
     </div>
   );
 }
+
+
+
 

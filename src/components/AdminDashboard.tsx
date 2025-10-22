@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Product, ChangeHistory } from "../lib/mockData";
+import { Product, ChangeHistory } from "../lib/types";
 import { calculateSalePrice, formatCurrency, formatPercentage, validateMargin, deriveMarginFromPrices } from "../lib/utils";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -148,7 +148,7 @@ export function AdminDashboard({ products, onUpdateProducts, history, onAddHisto
         <div className="container mx-auto px-4 py-4">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
-              <h1 className="text-[#3d3426]">Dashboard Administrativo</h1>
+              <h1 className="text-[#3d3426] font-bold text-xl sm:text-2xl tracking-wide leading-tight">Amar Castanhas</h1>
               <p className="text-sm text-muted-foreground">Gestão de produtos e margens de lucro</p>
             </div>
             <div className="flex gap-2 flex-wrap">

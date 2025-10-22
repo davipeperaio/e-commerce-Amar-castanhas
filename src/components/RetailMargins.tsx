@@ -48,10 +48,16 @@ export function RetailMargins({ products, margins, onUpdateMargins, onUpdateProd
     }
 
     // Update margins
-    const updatedMargins = margins.map(m =>
-      m.productId === editingId ? { ...m, margem: marginValue } : m
-    );
-    onUpdateMargins(updatedMargins);
+    let found = false;
+    const updatedMargins = margins.map(m => {
+      if (m.productId === editingId) {
+        found = true;
+        return { ...m, margem: marginValue };
+      }
+      return m;
+    });
+    const finalMargins = found ? updatedMargins : [...updatedMargins, { productId: editingId, margem: marginValue }];
+    onUpdateMargins(finalMargins);
 
     // Recalculate product prices
     const product = products.find(p => p.id === editingId);
@@ -85,8 +91,10 @@ export function RetailMargins({ products, margins, onUpdateMargins, onUpdateProd
     }
 
     // Update all margins
-    const updatedMargins = margins.map(m => ({ ...m, margem: marginValue }));
-    onUpdateMargins(updatedMargins);
+    const allProductIds = products.map(p => p.id);
+    const marginMap = new Map(margins.map(m => [m.productId, m.margem] as const));
+    const finalMarginsGlobal = allProductIds.map(pid => ({ productId: pid, margem: marginValue }));
+    onUpdateMargins(finalMarginsGlobal);
 
     // Recalculate all product prices
     const updatedProducts = products.map(p => {
@@ -408,4 +416,5 @@ export function RetailMargins({ products, margins, onUpdateMargins, onUpdateProd
     </div>
   );
 }
+
 

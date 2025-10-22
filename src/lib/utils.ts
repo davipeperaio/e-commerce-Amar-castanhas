@@ -100,7 +100,8 @@ export function parsePercentBR(value: unknown): number {
 
 // CSV parser with delimiter auto-detection and quoted fields support
 export function parseCSV(csvText: string): any[] {
-  const text = csvText.replace(/\r\n?/g, "\n").trim();
+  // Normalize newlines and strip BOM if present
+  const text = csvText.replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n").trim();
   if (!text) return [];
   const firstLine = text.split("\n", 1)[0];
   const commaCount = (firstLine.match(/,/g) || []).length;
@@ -130,7 +131,7 @@ export function parseCSV(csvText: string): any[] {
   const lines = text.split("\n");
   if (lines.length < 2) return [];
   const headersRaw = parseLine(lines[0]);
-  const headers = headersRaw.map(h => h.trim());
+  const headers = headersRaw.map(h => h.replace(/^\uFEFF/, "").trim());
   const data: any[] = [];
   for (let i = 1; i < lines.length; i++) {
     if (!lines[i].trim()) continue;

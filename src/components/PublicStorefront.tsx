@@ -1,6 +1,7 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { Product, WeightOption, CartItem, ProductCategory } from "../lib/types";
 import { formatCurrency } from "../lib/utils";
+import { normalizePtBrLabel } from "../lib/normalize";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Card, CardContent } from "./ui/card";
@@ -44,7 +45,8 @@ export function PublicStorefront({ products, onLogin, cart, onAddToCart, onUpdat
   };
 
   const handleAddToCart = (product: Product) => {
-    const weight = selectedWeights[product.id] || "500g";
+    const weight = selectedWeights[product.id];
+    if (!weight) return; // require explicit selection
     onAddToCart(product, weight);
     setCartOpen(true);
   };
@@ -178,8 +180,9 @@ export function PublicStorefront({ products, onLogin, cart, onAddToCart, onUpdat
       <div className="container mx-auto px-4 py-8 md:py-12">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filteredProducts.map((product) => {
-            const selectedWeight = selectedWeights[product.id] || "500g";
-            const price = product.prices[selectedWeight];
+            const selectedWeight = selectedWeights[product.id];
+            const price = selectedWeight ? product.prices[selectedWeight] : undefined;
+            const isDisabled = !product.emEstoque || !selectedWeight;
 
             return (
               <Card key={product.id} className="overflow-hidden hover:shadow-lg transition-shadow border-border group">
@@ -204,20 +207,20 @@ export function PublicStorefront({ products, onLogin, cart, onAddToCart, onUpdat
                 
                 <CardContent className="p-4 space-y-3">
                   <div>
-                    <h3 className="text-foreground">{product.nome}</h3>
+                    <h3 className="text-foreground">{normalizePtBrLabel(product.nome)}</h3>
                     <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
                       {product.descricao}
                     </p>
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-xs text-muted-foreground">Peso:</label>
+                    <label className="text-xs text-muted-foreground">Quantidade:</label>
                     <Select
-                      value={selectedWeight}
+                      value={selectedWeight ?? undefined}
                       onValueChange={(value) => handleWeightChange(product.id, value as WeightOption)}
                     >
                       <SelectTrigger className="bg-input-background border-border">
-                        <SelectValue />
+                        <SelectValue placeholder="Selecione" />
                       </SelectTrigger>
                       <SelectContent>
                         {product.availableWeights.map((weight) => (
@@ -231,17 +234,23 @@ export function PublicStorefront({ products, onLogin, cart, onAddToCart, onUpdat
 
                   <div className="pt-2">
                     <p className="text-primary">
-                      {formatCurrency(price)}
+                      {price !== undefined ? formatCurrency(price) : "—"}
                     </p>
                   </div>
 
                   <Button
                     onClick={() => handleAddToCart(product)}
-                    disabled={!product.emEstoque}
+                    disabled={isDisabled}
                     className="w-full bg-primary hover:bg-primary/90 text-primary-foreground disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <ShoppingCart className="w-4 h-4 mr-2" />
-                    Adicionar ao Carrinho
+                    {isDisabled ? (
+                      <>Selecione a quantidade</>
+                    ) : (
+                      <>
+                        <ShoppingCart className="w-4 h-4 mr-2" />
+                        Adicionar ao Carrinho
+                      </>
+                    )}
                   </Button>
                 </CardContent>
               </Card>
@@ -258,3 +267,6 @@ export function PublicStorefront({ products, onLogin, cart, onAddToCart, onUpdat
     </div>
   );
 }
+
+
+

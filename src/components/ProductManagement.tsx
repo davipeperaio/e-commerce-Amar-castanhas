@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+﻿import { useState, useRef } from "react";
 import { Product, WeightOption, ProductCategory } from "../lib/types";
 import { formatCurrency, parseCSV, calculateRetailPrices, parseBRNumber, parsePercentBR, normalizeKey } from "../lib/utils";
 import { Button } from "./ui/button";
@@ -24,6 +24,8 @@ export function ProductManagement({ products, onUpdateProducts }: ProductManagem
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
 
   // Form state
   const [formData, setFormData] = useState({
@@ -56,7 +58,7 @@ export function ProductManagement({ products, onUpdateProducts }: ProductManagem
 
     const precoCompra = parseFloat(formData.preco_compra);
     if (isNaN(precoCompra) || precoCompra <= 0) {
-      toast.error("Preço de compra inválido");
+      toast.error("Preço de Compra inválido");
       return;
     }
 
@@ -149,13 +151,17 @@ export function ProductManagement({ products, onUpdateProducts }: ProductManagem
           return undefined;
         };
 
+        // Build a helper to reuse IDs by SKU and avoid duplicates
+        const existingBySku = new Map(products.map(p => [String(p.sku).trim(), p] as const));
+        const seenSku = new Set<string>();
+
         const newProducts: Product[] = data.map((row, index) => {
           const nome = getVal(row, ["nome", "produto"]) || "Sem nome";
-          const rawPrecoCompra = getVal(row, ["preco_compra", "preço de compra", "preco de compra", "custo", "preco base"]);
-          const rawPrecoVenda = getVal(row, ["preco_venda", "preço de venda", "preco de venda", "venda", "1kg"]);
+          const rawprecoCompra = getVal(row, ["preco_compra", "Preço de Compra", "Preço de compra", "custo", "Preço base"]);
+          const rawprecoVenda = getVal(row, ["Preço_venda", "preço de venda", "Preço de venda", "venda", "1kg"]);
           const rawMargem = getVal(row, ["margem", "lucro", "lucro %", "% lucro", "margem %"]);
-          let precoCompra = parseBRNumber(rawPrecoCompra);
-          const precoVenda = parseBRNumber(rawPrecoVenda);
+          let precoCompra = parseBRNumber(rawprecoCompra);
+          const precoVenda = parseBRNumber(rawprecoVenda);
           let margem = parsePercentBR(rawMargem);
           if ((isNaN(margem) || margem === 0) && !isNaN(precoCompra) && precoCompra > 0 && !isNaN(precoVenda) && precoVenda > 0) {
             margem = (precoVenda / precoCompra - 1) * 100;
@@ -169,14 +175,26 @@ export function ProductManagement({ products, onUpdateProducts }: ProductManagem
 
           const categoria = (getVal(row, ["categoria"]) as ProductCategory) || "Castanhas";
           const descricao = getVal(row, ["descricao", "descrição"]) || "";
-          const sku = getVal(row, ["sku"]) || `SKU-${Date.now()}-${index}`;
+          const sku = (getVal(row, ["sku"]) || `SKU-${Date.now()}-${index}`).toString().trim();
           const imagem_url = getVal(row, ["imagem_url", "imagem", "url imagem"]) || "";
-          const unidade = (getVal(row, ["unidade", "peso"]) || "kg").toString().toLowerCase() === "kg" ? "kg" : "kg";
+          const unidade = "kg";
           const emEstoqueStr = getVal(row, ["emestoque", "em_estoque", "estoque"]) as string | undefined;
           const emEstoque = emEstoqueStr ? !(emEstoqueStr === "false" || emEstoqueStr === "0") : true;
 
+          // Reuse existing ID for same SKU (prevents duplicates on repeated imports)
+          const reuse = existingBySku.get(sku);
+          // Deterministic ID by SKU when new (so multiple imports of the same CSV don't create duplicates)
+          const deterministicId = `p-${sku.replace(/[^a-zA-Z0-9_-]/g, "").toLowerCase()}`;
+
+          // Ensure we don't create two entries for same SKU within the same CSV
+          if (seenSku.has(sku)) {
+            // If duplicate line for same SKU appears in CSV, skip creating a second product
+            return null as unknown as Product;
+          }
+          seenSku.add(sku);
+
           const product: Product = {
-            id: `imported-${Date.now()}-${index}`,
+            id: reuse?.id ?? deterministicId,
             sku,
             nome,
             categoria,
@@ -185,15 +203,16 @@ export function ProductManagement({ products, onUpdateProducts }: ProductManagem
             prices,
             imagem_url,
             unidade,
-            ativo: true,
-            emEstoque,
+            ativo: reuse?.ativo ?? true,
+            emEstoque: reuse?.emEstoque ?? emEstoque,
             availableWeights: ["200g", "500g", "1kg"],
             margem,
           };
           return product;
         });
 
-        onUpdateProducts([...products, ...newProducts]);
+        const filtered = newProducts.filter(Boolean) as Product[];
+        onUpdateProducts([...products, ...filtered]);
         toast.success(`${newProducts.length} produtos importados com sucesso!`);
       } catch (error) {
         toast.error("Erro ao importar CSV. Verifique o formato do arquivo.");
@@ -267,7 +286,7 @@ export function ProductManagement({ products, onUpdateProducts }: ProductManagem
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {products.map((product) => (
+                {products.slice((page - 1) * pageSize, page * pageSize).map((product) => (
                   <TableRow key={product.id} className="hover:bg-muted/30">
                     <TableCell>
                       <div className="flex items-center gap-3">
@@ -357,6 +376,24 @@ export function ProductManagement({ products, onUpdateProducts }: ProductManagem
         </CardContent>
       </Card>
 
+      {/* Pagination */}
+      <div className="flex items-center justify-end gap-2">
+        <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+          ← Anterior
+        </Button>
+        <span className="text-sm text-muted-foreground">
+          Página {page} de {Math.max(1, Math.ceil(products.length / pageSize))}
+        </span>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={page >= Math.ceil(products.length / pageSize)}
+          onClick={() => setPage((p) => p + 1)}
+        >
+          Próxima →
+        </Button>
+      </div>
+
       {/* Add/Edit Dialog */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
         <DialogContent className="max-w-2xl bg-card border-border max-h-[90vh] overflow-y-auto">
@@ -424,7 +461,7 @@ export function ProductManagement({ products, onUpdateProducts }: ProductManagem
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="descricao">Descrição</Label>
+              <Label htmlFor="descricao">descrição</Label>
               <Textarea
                 id="descricao"
                 value={formData.descricao}
@@ -483,4 +520,13 @@ export function ProductManagement({ products, onUpdateProducts }: ProductManagem
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
 

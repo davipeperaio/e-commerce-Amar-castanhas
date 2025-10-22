@@ -56,10 +56,18 @@ export function WholesaleMargins({ products, margins, onUpdateMargins }: Wholesa
     }
 
     const marginKey = `margem_${editField}` as keyof WholesaleMarginsType;
-    const updatedMargins = margins.map(m =>
-      m.productId === editingId ? { ...m, [marginKey]: marginValue } : m
-    );
-    onUpdateMargins(updatedMargins);
+    let found = false;
+    const updatedMargins = margins.map(m => {
+      if (m.productId === editingId) {
+        found = true;
+        return { ...m, [marginKey]: marginValue } as WholesaleMarginsType;
+      }
+      return m;
+    });
+    const finalMargins = found
+      ? updatedMargins
+      : [...updatedMargins, { productId: editingId, margem_3kg: editField === "3kg" ? marginValue : 25, margem_5kg: editField === "5kg" ? marginValue : 22, margem_10kg: editField === "10kg" ? marginValue : 18 }];
+    onUpdateMargins(finalMargins);
 
     setEditingId(null);
     setEditField(null);
@@ -92,13 +100,15 @@ export function WholesaleMargins({ products, margins, onUpdateMargins }: Wholesa
       return;
     }
 
-    const updatedMargins = margins.map(m => ({
-      ...m,
+    const ids = products.map(p => p.id);
+    const byId = new Map(margins.map(m => [m.productId, m] as const));
+    const final = ids.map(id => ({
+      productId: id,
       margem_3kg: margin3kg,
       margem_5kg: margin5kg,
       margem_10kg: margin10kg,
     }));
-    onUpdateMargins(updatedMargins);
+    onUpdateMargins(final);
 
     setShowGlobalDialog(false);
     setGlobalMargins({ "3kg": "", "5kg": "", "10kg": "" });
@@ -529,4 +539,5 @@ export function WholesaleMargins({ products, margins, onUpdateMargins }: Wholesa
     </div>
   );
 }
+
 

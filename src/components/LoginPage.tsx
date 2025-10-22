@@ -1,10 +1,11 @@
-﻿﻿import { useState } from "react";
+import { useState } from "react";
+import { supabase, isSupabaseEnabled } from "../lib/supabase";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Alert, AlertDescription } from "./ui/alert";
-import { Leaf, AlertCircle } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 
 interface LoginPageProps {
@@ -13,61 +14,79 @@ interface LoginPageProps {
 }
 
 export function LoginPage({ onLogin, onBackToStore }: LoginPageProps) {
-  // Lightweight obfuscation to avoid plain credentials in source
-  const decode = (s: string) => {
-    try {
-      return atob(s);
-    } catch {
-      try { return Buffer.from(s, "base64").toString("utf-8"); } catch { return s; }
-    }
-  };
-  const ADMIN_EMAIL = decode(["YW1hcmN", "hc3Rhbmhhc0B", "nbWFpbC5jb20="].join(""));
-  const ADMIN_PASSWORD = decode(["UVcx", "aGNrQXhNalt1"] // bogus chunk to confuse greps
-    .join("").slice(0,0) + "QW1hckAxMjYu");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
   const [showRecovery, setShowRecovery] = useState(false);
   const [recoveryEmail, setRecoveryEmail] = useState("");
   const [recoverySuccess, setRecoverySuccess] = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const validateEmail = (e: string) => /\S+@\S+\.\S+/.test(e);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
-    if (!email || !password) {
-      setError("Por favor, preencha todos os campos");
-      return;
-    }
+    if (!email || !password) return setError("Por favor, preencha todos os campos");
+    if (!validateEmail(email)) return setError("E-mail inválido");
 
-    if (!email.includes("@")) {
-      setError("E-mail inválido");
-      return;
-    }
+    try {
+      setLoading(true);
 
-    // Credenciais fixas
-    const normalized = email.trim().toLowerCase();
-    if (normalized !== ADMIN_EMAIL || password !== ADMIN_PASSWORD) {
-      setError("Credenciais inválidas. Verifique e tente novamente.");
-      return;
-    }
+      if (!isSupabaseEnabled || !supabase) {
+        // Modo local: aceita qualquer combinação
+        onLogin(email.trim().toLowerCase());
+        return;
+      }
 
-    onLogin(ADMIN_EMAIL);
+      const { error } = await supabase.auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
+        password,
+      });
+      if (error) throw error;
+
+      onLogin(email.trim().toLowerCase());
+    } catch (err: any) {
+      setError(err.message || "Não foi possível autenticar");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleRecovery = (e: React.FormEvent) => {
+  const handleRecovery = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!recoveryEmail || !recoveryEmail.includes("@")) {
-      setError("E-mail inválido");
-      return;
-    }
-    setRecoverySuccess(true);
     setError("");
-    setTimeout(() => {
-      setShowRecovery(false);
-      setRecoverySuccess(false);
-      setRecoveryEmail("");
-    }, 3000);
+
+    if (!recoveryEmail || !validateEmail(recoveryEmail)) {
+      return setError("E-mail inválido");
+    }
+
+    try {
+      setLoading(true);
+      if (!isSupabaseEnabled || !supabase) {
+        setError("Recuperação de senha indisponível no modo local.");
+        return;
+      }
+      const { error } = await supabase.auth.resetPasswordForEmail(
+        recoveryEmail.trim().toLowerCase(),
+        {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        }
+      );
+      if (error) throw error;
+
+      setRecoverySuccess(true);
+      setTimeout(() => {
+        setShowRecovery(false);
+        setRecoverySuccess(false);
+        setRecoveryEmail("");
+      }, 3000);
+    } catch (err: any) {
+      setError(err.message || "Falha ao enviar e-mail de recuperação");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -81,75 +100,81 @@ export function LoginPage({ onLogin, onBackToStore }: LoginPageProps) {
               className="w-16 h-16 object-contain"
             />
           </div>
-          <CardTitle className="text-[#3d3426]">
-            {showRecovery ? "Recuperar Senha" : "Bem-vindo"}
-          </CardTitle>
+
+          <CardTitle className="text-[#3d3426]">{showRecovery ? "Recuperar Senha" : "Bem-vindo"}</CardTitle>
+
           <CardDescription className="text-[#7d7259]">
-            {showRecovery 
-              ? "Digite seu e-mail para recuperar sua senha" 
+            {showRecovery
+              ? "Digite seu e-mail para recuperar sua senha"
               : "Sistema de Gestão - Amar Castanhas"}
           </CardDescription>
         </CardHeader>
+
         <CardContent>
           {!showRecovery ? (
-            <form onSubmit={handleSubmit} className="space-y-4" autoComplete="off">
+            <form onSubmit={handleSubmit} className="space-y-4">
               {error && (
                 <Alert variant="destructive" className="bg-destructive/10 border-destructive/30">
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>{error}</AlertDescription>
                 </Alert>
               )}
-              
+
               <div className="space-y-2">
                 <Label htmlFor="email">E-mail</Label>
                 <Input
                   id="email"
                   type="email"
-                  placeholder=""
+                  placeholder="seuemail@exemplo.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="bg-input-background border-border"
-                  autoComplete="off"
+                  autoComplete="email"
+                  required
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="password">Senha</Label>
                 <Input
                   id="password"
                   type="password"
-                  placeholder=""
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="bg-input-background border-border"
-                  autoComplete="new-password"
+                  autoComplete="current-password"
+                  required
                 />
               </div>
 
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
+                disabled={loading}
                 className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
               >
-                Entrar
+                {loading ? "Entrando..." : "Entrar"}
               </Button>
 
-              <button
-                type="button"
-                onClick={() => setShowRecovery(true)}
-                className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Esqueceu sua senha?
-              </button>
-              {onBackToStore && (
-                <Button
+              <div className="space-y-2">
+                <button
                   type="button"
-                  variant="ghost"
-                  onClick={() => onBackToStore()}
-                  className="w-full text-muted-foreground hover:text-foreground"
+                  onClick={() => setShowRecovery(true)}
+                  className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors"
                 >
-                  Voltar para a loja
-                </Button>
-              )}
+                  Esqueceu sua senha?
+                </button>
+
+                {onBackToStore && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={onBackToStore}
+                    className="w-full text-muted-foreground hover:text-foreground"
+                  >
+                    Voltar para a loja
+                  </Button>
+                )}
+              </div>
             </form>
           ) : (
             <form onSubmit={handleRecovery} className="space-y-4">
@@ -173,21 +198,20 @@ export function LoginPage({ onLogin, onBackToStore }: LoginPageProps) {
                 <Input
                   id="recovery-email"
                   type="email"
-                  placeholder="amarcastanhas@gmail.com"
+                  placeholder="seuemail@exemplo.com"
                   value={recoveryEmail}
                   onChange={(e) => setRecoveryEmail(e.target.value)}
                   className="bg-input-background border-border"
+                  required
                 />
               </div>
 
               <div className="space-y-2">
-                <Button 
-                  type="submit" 
-                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
-                >
-                  Enviar E-mail de Recuperação
+                <Button type="submit" disabled={loading} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
+                  {loading ? "Enviando..." : "Enviar e-mail de recuperação"}
                 </Button>
-                <Button 
+
+                <Button
                   type="button"
                   variant="outline"
                   onClick={() => {
@@ -199,11 +223,12 @@ export function LoginPage({ onLogin, onBackToStore }: LoginPageProps) {
                 >
                   Voltar ao Login
                 </Button>
+
                 {onBackToStore && (
                   <Button
                     type="button"
                     variant="ghost"
-                    onClick={() => onBackToStore()}
+                    onClick={onBackToStore}
                     className="w-full text-muted-foreground hover:text-foreground"
                   >
                     Voltar para a loja
