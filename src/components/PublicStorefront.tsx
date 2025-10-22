@@ -173,6 +173,7 @@ export function PublicStorefront({ products, onLogin, cart, onAddToCart, onUpdat
             <ImageWithFallback
               src="/hero-illustration.png"
               alt="Amar Castanhas — Produtos naturais premium"
+              fallbackSrc="/logo-amar-castanhas.png"
               className="h-full w-auto max-w-full object-contain drop-shadow-2xl"
             />
           </div>
