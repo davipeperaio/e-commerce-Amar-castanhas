@@ -145,14 +145,15 @@ export function PublicStorefront({ products, onLogin, cart, onAddToCart, onUpdat
 
       {/* Products Grid */}
       <div className="container mx-auto px-4 py-8 md:py-12">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="rounded-xl p-4 md:p-6" style={{ backgroundColor: "#8BB04F" }}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 items-stretch">
           {filteredProducts.map((product) => {
             const selectedWeight = selectedWeights[product.id];
             const price = selectedWeight ? product.prices[selectedWeight] : undefined;
             const isDisabled = !product.emEstoque || !selectedWeight;
 
             return (
-              <Card key={product.id} className="overflow-hidden hover:shadow-lg transition-shadow border-border group">
+              <Card key={product.id} className="overflow-hidden hover:shadow-lg transition-shadow border-border group h-full flex flex-col bg-card">
                 <div className="relative aspect-square overflow-hidden bg-muted">
                   <ImageWithFallback
                     src={product.imagem_url}
@@ -172,7 +173,7 @@ export function PublicStorefront({ products, onLogin, cart, onAddToCart, onUpdat
                   )}
                 </div>
                 
-                <CardContent className="p-4 space-y-3">
+                <CardContent className="p-4 space-y-3 flex flex-col h-full">
                   <div>
                     <h3 className="text-foreground">{normalizePtBrLabel(product.nome)}</h3>
                     <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
@@ -199,7 +200,7 @@ export function PublicStorefront({ products, onLogin, cart, onAddToCart, onUpdat
                     </Select>
                   </div>
 
-                  <div className="pt-2">
+                  <div className="pt-2 mt-auto">
                     <p className="text-primary">
                       {price !== undefined ? formatCurrency(price) : "—"}
                     </p>
@@ -230,8 +231,9 @@ export function PublicStorefront({ products, onLogin, cart, onAddToCart, onUpdat
             <p className="text-muted-foreground">Nenhum produto encontrado</p>
           </div>
         )}
+        </div>
+        </div>
       </div>
-    </div>
   );
 }
 
